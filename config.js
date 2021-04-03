@@ -2,7 +2,6 @@ const SSG = require('./engine');
 const routes = require('./routes');
 
 const ssg = new SSG({
-  fileExtension: 'html',
   viewsPath: '/views',
   publicPath: '/public',
   routes,

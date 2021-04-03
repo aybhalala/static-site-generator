@@ -1,3 +1,4 @@
 module.exports = {
-  '/': 'index',
+  '/': 'index.html',
+  '/test/': 'new.html',
 };

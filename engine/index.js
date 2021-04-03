@@ -11,29 +11,39 @@ class StaticSiteGenerator {
      * @param {Object} options.routes Routes
      * @param {string} options.viewsPath Path to the views directory in the project
      * @param {string} options.publicPath Path to the public directory in the project. This contains stylesheets, scripts and all public files.
-     * @param {string} options.fileExtension File extension for views. Defaults to ejs.
      * @param {string} options.port Port for starting the dev server.
      */
   constructor(options = {}) {
     const {
-      routes, viewsPath, publicPath, fileExtension, port = 3000,
+      routes, viewsPath = 'views', publicPath = 'public', port = 3000,
     } = options;
     if (!routes) {
       throw new Error('routes parameter missing');
     }
     this.app = express();
     this.rootPath = process.cwd();
-    this.viewsPath = path.join(this.rootPath, (viewsPath || 'views'));
-    this.publicPath = path.join(this.rootPath, (publicPath || 'public'));
+    this.viewsPath = path.join(this.rootPath, viewsPath);
+    this.publicPath = path.join(this.rootPath, publicPath);
+    this.routes = routes;
     this.port = port;
 
     this.app.set('views', this.viewsPath);
-    this.app.set('view engine', (fileExtension || 'ejs'));
-    this.app.engine((fileExtension || 'ejs'), ejs.renderFile);
+    this.app.set('view engine', 'html');
+    this.app.engine('html', ejs.renderFile);
     this.app.use(express.static(this.publicPath));
     _.forOwn(routes, (v, k) => {
-      this.app.get(k, (req, res) => res.render(v));
+      this.app.get(this.fixGetPath(k), (req, res) => res.render(v));
     });
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  fixGetPath(getPath) {
+    if (!_.startsWith(getPath, '/')) getPath = `/${getPath}`;
+    if (_.endsWith(getPath, '/')) getPath = `${getPath}index.html`;
+    if (!_.endsWith(getPath, '.html')) {
+      throw new Error("routes path should either end with '/' or with '.html'");
+    }
+    return getPath;
   }
 
   start() {
@@ -43,6 +53,7 @@ class StaticSiteGenerator {
   }
 
   async build() {
+    const isDir = (p) => _.endsWith(p, '/');
     try {
       console.log('Build called');
       console.log(`viewsPath = ${this.viewsPath}`);
@@ -50,6 +61,16 @@ class StaticSiteGenerator {
       const buildPath = path.join(this.rootPath, 'build');
       await fse.ensureDir(buildPath);
       await fse.emptyDir(buildPath);
+      await fse.copy(this.publicPath, buildPath);
+      _.forOwn(this.routes, async (v, k) => {
+        let fileName = path.join(buildPath, k);
+        if (isDir(k)) {
+          await fse.ensureDir(fileName);
+          fileName += '/index.html';
+        }
+        const html = await ejs.renderFile(path.join(this.viewsPath, v));
+        await fse.outputFile(fileName, html);
+      });
     } catch (e) {
       console.log('There were errors in building the website');
       throw new Error(e);

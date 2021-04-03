@@ -38,12 +38,13 @@ class StaticSiteGenerator {
 
   // eslint-disable-next-line class-methods-use-this
   fixGetPath(getPath) {
-    if (!_.startsWith(getPath, '/')) getPath = `/${getPath}`;
-    if (_.endsWith(getPath, '/')) getPath = `${getPath}index.html`;
-    if (!_.endsWith(getPath, '.html')) {
+    let newGetPath = getPath;
+    if (!_.startsWith(newGetPath, '/')) newGetPath = `/${newGetPath}`;
+    if (_.endsWith(newGetPath, '/')) newGetPath = `${newGetPath}index.html`;
+    if (!_.endsWith(newGetPath, '.html')) {
       throw new Error("routes path should either end with '/' or with '.html'");
     }
-    return getPath;
+    return newGetPath;
   }
 
   start() {
